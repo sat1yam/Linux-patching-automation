@@ -1,0 +1,219 @@
+---
+- name: precheck script
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+    - name: checking is host is reachable or not
+      wait_for_connection: 
+                    timeout: 60
+      register: connection_check
+      ignore_unreachable: yes
+      ignore_errors: yes
+     
+    - name: If host is unreachable
+      debug: 
+        msg: "{{ inventory_hostname }} is {{ connection_check }} "
+        #var: "{{ connection_check.stdout }}" 
+      when: connection_check is failed      
+    - name: finding old precheck filesystem
+      find: 
+        paths: /tmp
+        patterns: "precheck_*.txt"
+        #age: 7d
+      register: old_precheck  
+
+    - name: Removing old precheck file from server 
+      file: 
+         path: "{{ item.path }}"   
+         state: absent
+      loop: "{{ old_precheck.files }}"
+      when: old_precheck.matched > 0   
+      when: connection_check is succeeded     
+
+    - name: Collecting precheck for the server   
+      block:
+              - name: hostname
+                shell: hostname
+                register: hostname_result    
+          
+              - name: uptime check
+                shell: uptime
+                register: uptime_result
+
+              - name: kernel version of the server
+                shell: uname -a
+                register: kernel_result  
+
+              - name: IP address
+                shell: ip a
+                register: ip_result
+
+              - name: OS version
+                shell: cat /etc/os-release
+                register: os_version_result
+
+              - name: block disk listing
+                shell: lsblk
+                register: diskblock_result
+
+              - name: disk filesystem     
+                shell: df -Th
+                register: filesystem_result
+
+              - name: physical volume
+                shell: pvs
+                register: physical_volume_result
+
+              - name: volume groups
+                shell: vgs
+                register: volume_group_result
+
+              - name: logical volume
+                shell: lvs
+                register: logical_volume_result
+
+              - name: fstab output 
+                shell: cat /etc/fstab 
+                register: fstab_result    
+
+              - name: storing output
+                set_fact:
+                    precheck_report: | 
+                          =========Hostname===========
+                             {{ hostname_result.stdout | upper }}
+                      
+                          ========Uptime==============
+                             {{ uptime_result.stdout }}
+
+                          ========kernel version========
+                              {{ kernel_result.stdout }}   
+                     
+                          =======IP adderess=====
+                             {% for line in ip_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+                         
+                          =======os version======
+                             {% for line in os_version_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+                       
+                          ======Disk Block=======
+                             {% for line in diskblock_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+                        
+                          ======Disk Filesystem=====
+                             {% for line in filesystem_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+                         
+                          ======Physical volume========
+                             {% for line in physical_volume_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+
+                          ======= volume group==========
+                             {% for line in volume_group_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+
+                          =======logical volume=======
+                             {% for line in logical_volume_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+
+                          =========fstab==============
+                             {% for line in fstab_result.stdout_lines %}
+                             {{ line }}
+                             {% endfor %}
+              - name: save precheck file on host
+                copy: 
+                   content: "{{ precheck_report }}"   
+                   dest: "/tmp/precheck_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
+                   mode: '0644'         
+
+
+      when: connection_check is succeeded
+      rescue: 
+               - name: whenever block task failed
+                 debug:
+                    msg: "precheck is not being stored for host {{ inventory_hostname }}"
+
+    - name: checking update on server 
+      command: dnf check-update
+      register: check_update
+      ignore_errors: yes
+      changed_when: false
+      failed_when: false  
+
+    - debug:
+          var: check_update.stdout_lines        
+      when: check_update.rc == 100    
+
+    - name: Patching the server 
+      block:
+          - name: checking repolist for server
+            shell: dnf repolist 
+            register: repolist_result
+
+          - debug: 
+                var: repolist_result.stdout_lines
+
+          - name: finally update the server
+            dnf:
+              name: "*"
+              state: latest
+
+          - name: rebooting the server
+            reboot:
+                msg: "Reboot initiated for server {{ inventory_hostname }} after patching"
+                reboot_timeout: 600
+
+          - name: checking is host is reachable or not
+            wait_for_connection: 
+                          timeout: 300
+            register: connection_check_result
+            ignore_unreachable: yes
+            ignore_errors: yes
+
+          - name: checking uptime for server
+            command: uptime
+            register: uptime_result
+
+          - name: If host is reachable
+            debug: 
+                msg: "{{ inventory_hostname }} is up and reachable from {{ uptime_result.stdout }} " 
+               
+      when: check_update.rc == 100
+                 
+    - name: when there is no update on server
+      debug:
+          msg: "No update on server"
+      when: check_update.rc != 100
+    # - name: New Block section
+    #   block:
+    #     - name: rebooting the server
+    #       reboot:
+    #             msg: "Reboot initiated for server {{ inventory_hostname }} after patching"
+    #             reboot_timeout: 600
+    #       when: connection_check is succeeded
+
+    #     - name: checking is host is reachable or not
+    #       wait_for_connection: 
+    #                     timeout: 300
+    #       register: connection_check_result
+    #       ignore_unreachable: yes
+    #       ignore_errors: yes
+
+    #     - name: If host is reachable
+    #       debug: 
+    #           msg: "{{ inventory_hostname }} is {{ connection_check_result }} " 
+    #       when: connection_check_result is succeeded   
+      
+    #   rescue:
+    #     - name: If host is unreachable
+    #       debug: 
+    #          msg: "{{ inventory_hostname }} is {{ connection_check_result }} "
+    #       when: connection_check_result is failed      

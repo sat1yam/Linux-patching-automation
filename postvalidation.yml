@@ -1,0 +1,83 @@
+---
+- name: Post-patch validation playbook
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Checking if host is reachable
+      wait_for_connection:
+        timeout: 60
+      register: connection_status
+      ignore_unreachable: yes
+      ignore_errors: yes
+
+    - name: If host is unreachable
+      debug:
+        msg: "Host {{ inventory_hostname }} is unreachable after patching!"
+      when: connection_status is failed
+
+    - name: Post-patch system validation
+      block:
+        - name: Capture hostname
+          shell: hostname
+          register: hostname_result
+
+        - name: Check uptime
+          shell: uptime
+          register: uptime_result
+
+        - name: Check kernel version
+          shell: uname -r
+          register: kernel_result
+
+        - name: Check OS version
+          shell: cat /etc/os-release
+          register: os_version_result
+
+        - name: Check running services
+          shell: systemctl list-units --type=service --state=running | head -20
+          register: running_services
+
+        - name: Check system load
+          shell: cat /proc/loadavg
+          register: load_avg
+
+        - name: Check available disk space
+          shell: df -h /
+          register: disk_usage
+
+        - name: Check network connectivity
+          shell: ping -c 2 8.8.8.8
+          register: network_status
+          ignore_errors: yes
+
+        - name: Create post-validation report
+          set_fact:
+            postcheck_report: |
+              ======== Post-Patch Validation Report ========
+              Hostname: {{ hostname_result.stdout }}
+              Kernel Version: {{ kernel_result.stdout }}
+              OS Version: {{ os_version_result.stdout }}
+              Uptime: {{ uptime_result.stdout }}
+              Load Average: {{ load_avg.stdout }}
+              Disk Usage: {{ disk_usage.stdout }}
+              Network Connectivity: {% if network_status.rc == 0 %} Successful {% else %} Failed {% endif %}
+              
+              ======= Running Services (Top 20) =======
+              {% for line in running_services.stdout_lines %}
+              {{ line }}
+              {% endfor %}
+              ==================================================
+
+        - name: Save post-validation report to /tmp
+          copy:
+            content: "{{ postcheck_report }}"
+            dest: "/tmp/postcheck_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
+            mode: '0644'
+
+      when: connection_status is succeeded
+      rescue:
+        - name: Report validation failure
+          debug:
+            msg: "Post-validation could not be performed on {{ inventory_hostname }}"

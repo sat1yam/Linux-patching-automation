@@ -1,0 +1,56 @@
+---
+- name: Patching playbook
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: checking update on server 
+      command: dnf check-update
+      register: check_update
+      ignore_errors: yes
+      changed_when: false
+      failed_when: false  
+
+    - debug:
+          var: check_update.stdout_lines        
+      when: check_update.rc == 100    
+
+    - name: Patching the server 
+      block:
+          - name: checking repolist for server
+            shell: dnf repolist 
+            register: repolist_result
+
+          - debug: 
+                var: repolist_result.stdout_lines
+
+          - name: finally update the server
+            dnf:
+              name: "*"
+              state: latest
+
+          - name: rebooting the server
+            reboot:
+                msg: "Reboot initiated for server {{ inventory_hostname }} after patching"
+                reboot_timeout: 600
+
+          - name: checking is host is reachable or not
+            wait_for_connection: 
+                          timeout: 300
+            register: connection_check_result
+            ignore_unreachable: yes
+            ignore_errors: yes
+
+          - name: checking uptime for server
+            command: uptime
+            register: uptime_result
+
+          - name: If host is reachable
+            debug: 
+                msg: "{{ inventory_hostname }} is up and reachable from {{ uptime_result.stdout }} " 
+               
+      when: check_update.rc == 100
+                 
+    - name: when there is no update on server
+      debug:
+          msg: "No update on server"
+      when: check_update.rc != 100
