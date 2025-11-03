@@ -4,10 +4,10 @@
   gather_facts: no
   tasks:
     - name: Run pre-patch health check
-      include_tasks: precheck.yml
+      include_tasks: ./tasks/precheck.yml
 
     - name: Run Patching process
-      include_tasks: patching.yml
+      include_tasks: ./tasks/patching.yml
 
     - name: Run post-patch validation
-      include_tasks: postvalidation.yml 
+      include_tasks: ./tasks/postvalidation.yml 
