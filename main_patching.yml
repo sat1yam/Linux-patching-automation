@@ -1,7 +1,8 @@
 ---
 - name: Linux Patching full workflow
   hosts: all
-  gather_facts: no
+  gather_facts: true
+  become: true
   tasks:
     - name: Run pre-patch health check
       include_tasks: ./tasks/precheck.yml

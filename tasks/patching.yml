@@ -1,7 +1,7 @@
 ---
 - name: Patching playbook
-  hosts: all
-  gather_facts: no
+  # hosts: all
+  #gather_facts: no
   tasks:
     - name: checking update on server 
       command: dnf check-update

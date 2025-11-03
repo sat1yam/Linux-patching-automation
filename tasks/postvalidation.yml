@@ -1,8 +1,8 @@
 ---
 - name: Post-patch validation playbook
-  hosts: all
+  # hosts: all
   become: true
-  gather_facts: true
+    #gather_facts: true
 
   tasks:
     - name: Checking if host is reachable
