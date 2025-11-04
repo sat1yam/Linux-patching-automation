@@ -2,7 +2,7 @@
 #- name: Patching playbook
   # hosts: all
   #gather_facts: no
-  tasks:
+  #tasks:
     - name: checking update on server 
       command: dnf check-update
       register: check_update
