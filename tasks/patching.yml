@@ -1,8 +1,9 @@
-#---
-#- name: Patching playbook
+---
+- name: Patching playbook
   # hosts: all
   #gather_facts: no
   #tasks:
+  block:
     - name: checking update on server 
       command: dnf check-update
       register: check_update
@@ -54,3 +55,13 @@
       debug:
           msg: "No update on server"
       when: check_update.rc != 100
+
+  rescue:
+      - name: Handle patching failure
+        debug:
+          msg: "⚠️  Patching failed for {{ inventory_hostname }}. Please check logs or rerun the job."
+
+  always:
+      - name: Log final patch status
+        debug:
+          msg: "Patching process completed (success or failure) for {{ inventory_hostname }}"
