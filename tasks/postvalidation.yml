@@ -1,7 +1,7 @@
----
-- name: Post-patch validation playbook
+#---
+#- name: Post-patch validation playbook
   # hosts: all
-  become: true
+  # become: true
     #gather_facts: true
 
   tasks:

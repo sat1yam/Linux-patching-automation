@@ -1,5 +1,5 @@
----
-- name: Patching playbook
+#---
+#- name: Patching playbook
   # hosts: all
   #gather_facts: no
   tasks:

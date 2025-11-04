@@ -1,8 +1,8 @@
 #---
-- name: precheck script
+#- name: precheck script
   #  hosts: all
   #gather_facts: true
-  become: true
+  # become: true
   tasks:
     - name: checking is host is reachable or not
       wait_for_connection: 
