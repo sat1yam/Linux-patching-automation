@@ -131,7 +131,7 @@
               - name: save precheck file on host
                 copy: 
                    content: "{{ precheck_report }}"   
-                   dest: "/tmp/precheck_{{ inventory_hostname }}_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
+                   dest: "/tmp/precheck_{{ ansible_hostname }}_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
                    mode: '0644'     
                 delegate_to: localhost    
 
