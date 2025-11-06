@@ -132,7 +132,8 @@
                 copy: 
                    content: "{{ precheck_report }}"   
                    dest: "/tmp/precheck_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
-                   mode: '0644'         
+                   mode: '0644'     
+                delegate_to: localhost    
 
 
       when: connection_check is succeeded
