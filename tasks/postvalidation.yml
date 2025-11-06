@@ -73,7 +73,7 @@
         - name: Save post-validation report to /tmp
           copy:
             content: "{{ postcheck_report }}"
-            dest: "/tmp/postcheck_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
+            dest: "/tmp/postcheck_{{ inventory_hostname }}_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.txt"
             mode: '0644'
           delegate_to: localhost
 
