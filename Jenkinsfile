@@ -48,7 +48,7 @@ def sendEmail(String STATUS) {
         to: "2021wb86549@wilp.bits-pilani.ac.in",
         replyTo: "2021wb86549@wilp.bits-pilani.ac.in",
         mimeType: "text/html",
-        attachmentsPattern: "/tmp/precheck_slv0002_2025-11-05_12:33:45.txt",
+        attachmentsPattern: 'checks/*.txt',
         body: """
 <!DOCTYPE html>
 <html>
