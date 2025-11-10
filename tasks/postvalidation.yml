@@ -17,6 +17,22 @@
         msg: "Host {{ inventory_hostname }} is unreachable after patching!"
       when: connection_status is failed
 
+    - name: finding old postcheck filesystem
+      find: 
+        paths: /tmp
+        patterns: "postcheck_*.txt"
+        #age: 7d
+      register: old_postcheck  
+
+    - name: Removing old postcheck file from server 
+      file: 
+         path: "{{ item.path }}"   
+         state: absent
+      loop: "{{ old_postcheck.files }}"
+      when: old_postcheck.matched > 0   
+      when: connection_check is succeeded     
+
+
     - name: Post-patch system validation
       block:
         - name: Capture hostname
